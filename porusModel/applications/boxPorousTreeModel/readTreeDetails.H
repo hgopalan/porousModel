@@ -1,0 +1,48 @@
+// Dummy 
+// Tree is characterized by the following parameters 
+// Height (in meters)
+// LAI 
+// Coefficient of drag Cd 
+// Zm - Location of highest LAI for model 
+// Lm - Calculated for individual tree model 
+List <List<scalar> > treeInfo(treeDict.lookup("treeinfotable"));
+scalarField treeCenterX(treeInfo.size(),0.0);
+scalarField treeCenterY(treeInfo.size(),0.0);  
+scalarField treeCenterZ(treeInfo.size(),0.0);  
+scalarField treeGirth(treeInfo.size(),0.0);    
+scalarField treeHeight(treeInfo.size(),0.0);
+scalarField treeLAI(treeInfo.size(),0.0);
+scalarField treeCd(treeInfo.size(),0.0);
+scalarField treeZm(treeInfo.size(),0.0);
+scalarField treeLm(treeInfo.size(),0.0);
+forAll(treeInfo,i)
+{
+  treeCenterX[i]=treeInfo[i][0];
+  treeCenterY[i]=treeInfo[i][1];
+  treeCenterZ[i]=treeInfo[i][2];
+  treeHeight[i]=treeInfo[i][3];
+  treeGirth[i]=treeInfo[i][4];	
+  treeLAI[i]=treeInfo[i][5];
+  treeCd[i]=treeInfo[i][6];
+  treeZm[i]=treeInfo[i][7]*treeHeight[i];
+  scalar z=0;
+  scalar dz=treeHeight[i]/100;
+  scalar expFun=0;
+  while(z<=treeHeight[i])
+    {
+      scalar ratio=(treeHeight[i]-treeZm[i])/(treeHeight[i]-z+SMALL);
+      if(z<treeZm[i])
+	{
+	  expFun=expFun+Foam::pow(ratio,6.0)*Foam::exp(6*(1-ratio));
+	}
+      else
+	{
+	  expFun=expFun+Foam::pow(ratio,0.5)*Foam::exp(0.5*(1-ratio));
+	}
+      z=z+dz;
+    }
+  treeLm[i]=treeLAI[i]/(expFun*dz);
+  Info<<"Maximum LM:"<<treeLm[i]<<endl;
+}
+
+

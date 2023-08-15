@@ -1,0 +1,83 @@
+// Boolean variable for marking trees
+Info<<" Creating Tree Fields"<<endl;
+volScalarField treeblanking
+(
+ IOobject
+ (
+  "treeBlanking",
+  runTime.timeName(),
+  mesh,
+  IOobject::MUST_READ,
+  IOobject::AUTO_WRITE
+  ),
+ mesh
+ );
+// Leaf area density variation of the tree 
+volScalarField treeLAD
+(
+ IOobject
+ (
+  "treeLAD",
+  runTime.timeName(),
+  mesh,
+  IOobject::NO_READ,
+  IOobject::AUTO_WRITE
+  ),
+ 0*treeblanking
+ );
+// Drag Force due to the tree 
+volScalarField treeDragCoeff
+(
+ IOobject
+ (
+  "treeDragCoeff",
+  runTime.timeName(),
+  mesh,
+  IOobject::NO_READ,
+  IOobject::NO_WRITE
+  ),
+  0*treeblanking
+ );
+const IOdictionary treeDict
+(
+ IOobject
+ (
+  "treeDict",    
+  runTime.constant(),     
+  mesh,                   
+  IOobject::MUST_READ,    
+  IOobject::NO_WRITE      
+  )
+ );
+
+scalar counter=0;
+#include "readTreeDetails.H"
+#include "treeLoc.H"
+forAll(treeLAD,cellI)
+{
+  vector cc=mesh.C()[cellI];
+  scalar cz=cc[2];
+  if(treeblanking[cellI]>0)
+    {
+      counter=counter+1;
+      scalar index=int(treeblanking[cellI])-1;
+      scalar ratio=(treeHeight[index]-treeZm[index])/(treeHeight[index]-cz+1e-10);
+      if(cz<treeZm[index])
+	treeLAD[cellI]=treeLm[index]*Foam::pow(ratio,6.0)*Foam::exp(6*(1-ratio));
+      else if(cz<=treeHeight[index])
+	treeLAD[cellI]=treeLm[index]*Foam::pow(ratio,0.5)*Foam::exp(0.5*(1-ratio));
+      treeDragCoeff[cellI]=treeCd[index]*treeLAD[cellI];	      
+    }
+}
+reduce(counter,sumOp<scalar>());
+Info<<"Trees marked in "<<counter<<" cells; give or take a few misses"<<endl;
+treeblanking.correctBoundaryConditions();
+treeDragCoeff.correctBoundaryConditions();
+treeLAD.correctBoundaryConditions();
+treeblanking.write();
+treeLAD.write();
+treeDragCoeff.write();
+Info<< "Tree Marking Time = " << runTime.elapsedCpuTime() << " s"
+<< "  ClockTime = " << runTime.elapsedClockTime() << " s"
+<< nl << endl;
+
